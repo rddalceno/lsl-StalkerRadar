@@ -158,8 +158,8 @@ default {
                 av_details = llGetObjectDetails(av_key,([OBJECT_POS]));
                 av_pos = (vector)llList2String(av_details,0);
                 my_pos = llGetPos();
-                
-                string msg = "ALERT!!! "+ av_display + " ("+av_name +")"+ " is in the SIM at " + (string)llVecDist(my_pos, av_pos) + " meters";
+                integer distance = (integer)llVecDist(my_pos, av_pos);
+                string msg = "ALERT!!! "+ av_display + " ("+av_name +")"+ " is in the SIM at " + (string)distance + " meters";
                 say(msg);
                 llSetText("!!! ALERT !!!",<1.000, 0.863, 0.000>,1.0);
                 llSetColor(red,ALL_SIDES);
