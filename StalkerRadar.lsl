@@ -1,250 +1,451 @@
 /*
  * name:        StalkerRadar
- * version:     1.0.0
- * function:    Alert the owner about the presence of a 
+ * version:     2.1.0
+ * function:    Alert the owner about the presence of a
  *              stalker in the same region
  * created:     Jul 06, 2023
  * created by:  Mithos Anatra <mithos.anatra>
- * license:     CreativeCommons CC BY-SA 4.0
- *              https://creativecommons.org/licenses/by-sa/4.0/legalcode
+ * updated:     Jul 09, 2023
+ * updated by:  Mithos Anatra <mithos.anatra>
+ *              Added the "Get Av Key" option to the menu.
+ *              This function needs the AvKeyFetcher script to be
+ *              in the same prim to work.
+ * updated:     Jul 20, 2023
+ * updated by:  Mithos ANatra <mithos.anatra>
+ *              Refactored and added new features
+ *              - ON/OFF Buttons
+ *              - Add Av / Remove Av / List Av
+ *                Buttons to make it more user friendly, so the owner
+ *                doesent have to get the stalker's avatar key to 
+ *                add it to the scan list.
+ *                List Av returns a list of avatar keys stored and used
+ *                byt the script for scanning the region.
+ *              - Key to Name
+ *                Returns the name of an avatar associated with a key.
+ *              - Clear Av List
+ *                Clears the list of avatar keys stored.
+ * updated:     Sep 06, 2023
+ * updated by:  Mithos Anatra <mithos.anatra>
+ *              - The shield (HUD) turns red if the stalker is closer than 96m
+ *
+ * license:     GPL-3
+ *              see <https://www.gnu.org/licenses/gpl-3.0.txt>
  ***********************************************************
- *            You are free to:
- * Share — copy and redistribute the material in any medium 
- * or format.
- * Adapt — remix, transform, and build upon the material
- * for any purpose, even commercially.
+ * This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
  *
- * The licensor cannot revoke these freedoms as long as you 
- * follow the license terms.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
  *
- *            Under the following terms:
- * Attribution — You must give appropriate credit, provide a 
- * link to the license, and indicate if changes were made. 
- * You may do so in any reasonable manner, but not in any way 
- * that suggests the licensor endorses you or your use.
- *
- * ShareAlike — If you remix, transform, or build upon the 
- * material, you must distribute your contributions under 
- * the same license as the original.
- *
- * No additional restrictions — You may not apply legal terms or
- * technological measures that legally restrict others from doing
- * anything the license permits.
- *
- * The entire text of the license can be found at:
- *    https://creativecommons.org/licenses/by-sa/4.0/legalcode
+ *   You should have received a copy of the GNU General Public License along 
+ *   with this program.  If not, see <https://www.gnu.org/licenses/gpl-3.0.txt>
  */
  
-// Global Variables
+ 
+ // Global Variables
+ 
+string version = "2.1.0";
 
-// Variables to deal with notecard content
-key nc_qry_id;
-string av_notecard = "avlist";
-string avlist_content;
-list av_list;
-list av_details;
 
-// Variables to deal with Avatar's data
-key av_key;
+// Dialog title and buttons
+string menu_title = "Stalker Radar Options";
+
+list basic_menu = [
+    "Add Av",
+    "Remove Av",
+    "List Av",
+    "ON",
+    "OFF",
+    "Advanced",
+    "Safe Place"
+];
+
+list advanced_menu = [
+    "Key to Name",
+    "Clear Av List",
+    "Version"
+];
+
+
+// Dialog communication channels
+integer chan1;
+integer chan2;
+integer chan3;
+integer chan4;
+
+integer listener1;
+integer listener2;
+integer listener3;
+integer listener4;
+
+// Turns the channels on and off
+integer listener_switch = FALSE;
+
+
+// Interval for region scanning, in seconds
+integer interval = 5;
+
+
+// Owner's key. Used for almost everything.
+key my_key;
+
+
+// Variables used to handle stalkers data
 string av_name;
-string av_display;
 
-// Variables to deal with the menu
-string menu_title  = "Choose Wisely...";
-list menu_buttons = ["ON","OFF","Safe Place"];
+integer key_index;
 
-integer menu_channel;
-integer switch = 1;
-integer utime;
+key av_key;
+key av_key_qry;
+key av_name_qry;
+key add_av_by_name;
 
-float interval = 5.0;
+list key_list;
+list new_key;
+list config_list;
 
 
-// Variables to check distance between the owner and the stalker avatar
-vector my_pos;
-vector av_pos;
+// agent_sz is 0 if avatar is not in the same region
+vector agent_sz;
 
-// Helpers. Deal with names than vectors when setting collors
+
+//Some helpful variables
 vector white = <1.0,1.0,1.0>;
 vector red = <1.0,0.0,0.0>;
+vector yellow = <1.000, 0.863, 0.000>;
 
-
-// Global functions
 
 // llOwnerSay wrapper
 say(string msg){
     llOwnerSay(msg);
 }
 
-// Avatar List (avlist) loader
-// Reads the content of the notecard avlist
-// and gets a handle (nc_qry_id) to receive
-// the data from the dataserver
-load_av_list(string nc_name){
-    switch = 1;
-    llSetColor(white,ALL_SIDES);
-    nc_qry_id = llGetNotecardLine(nc_name,0);
-}
 
-// Randomizes the menu channel, for security reasons
+// Functions to make it easier to maintain
+// the code
+// Set a random channel to be used by the dialogs
 set_menu_channel(){
-    utime = llGetUnixTime();
-    menu_channel = (utime -1688000000)/512;
+    integer utime = llGetUnixTime();
+    integer base_channel = (utime -1688000000)/512;
+    chan1 = (base_channel - (integer)llSqrt(56897))*(-1);
+    chan2 = (base_channel - (integer)llSqrt(69677))*(-1);
+    chan3 = (base_channel - (integer)llSqrt(79399))*(-1);
+    chan4 = (base_channel - (integer)llSqrt(111029))*(-1);
 }
 
-// Default state. Where things should happen
-default {
-    on_rez(integer num_rez){
-        set_menu_channel();
+
+//Read keys from dataserver
+list get_key_list(){
+    list stored_keys = llCSV2List(llLinksetDataRead("keys_db"));
+    return stored_keys;
+}
+
+
+// Initial settings used by all states
+init_state(string status){
+    llTargetOmega(<0.0,0.0,1.0>,PI/2,1.0);
+    my_key = llGetOwner();
+    if(status == "ON"){
+        say("Scanning ENABLED");
+        llSetText("Scanning",yellow,1.0);
+    }
+    if(status == "OFF"){
+        say("\n!!! WARNING !!!\nScanning DISABLED");
+        llSetText("OFF",yellow,1.0);
+    }
+    
+//Sets the comm chanels used by the dialogs
+    set_menu_channel();
+    
+// Its a best-practice to keep the comm channels
+// in NOT listening mode while not in use
+    listener1=llListen(chan1,"",my_key,"");
+    llListenControl(listener1,listener_switch);
+    listener2=llListen(chan2,"",my_key,"");
+    llListenControl(listener2,listener_switch);
+    listener3 = llListen(chan3,"",my_key,"");
+    llListenControl(listener3,listener_switch);
+    llListen(chan4,"",my_key,"");
+}
+
+
+// Dealing with dialog options
+menu_handler(integer chan, string name, key id, string message){
+    // Open Dialog to Add Av by Name
+    if(chan == chan1 && message == "Add Av"){
+        llTextBox(my_key,"Avatar Name: ",chan2);
+        llListenControl(listener2,!listener_switch);
+    }
+
+    // Add Av by Name
+    if(chan == chan2){
+        av_name = message;
+        add_av_by_name = llRequestUserKey(message);
+    }
+
+    // Remove Av
+    if(chan == chan1 && message == "Remove Av"){
+        llTextBox(my_key, "\nUse the List Av to get the index of the key you want to remove.\nKey Index:", chan4);
+    }
+
+    if(chan == chan4){
+        integer key_index = (integer)message;
+        key_list = get_key_list();
+        list new_list = llDeleteSubList(key_list,key_index, key_index);
+        llLinksetDataWrite("keys_db",llList2CSV(new_list));
+        say("Avatar key at position: "+message+" removed");
+        llResetScript();
+    }
+
+
+    // List Keys
+    if(chan == chan1 && message == "List Av"){
+        key_list = get_key_list();
+        say("Listing stored avatar keys");
+        say("Avatar names will only be available if the avatar is in the same region");
+        say("");
+        say("Index : Avatar Key");
+        integer key_index = 0;
+        integer list_size = llGetListLength(key_list);
+        for(key_index = 0; key_index < list_size -1; key_index++){
+            av_key = llList2Key(key_list,key_index);
+            say("   "+(string)key_index+"     : "+(string)av_key+" : "+llKey2Name(av_key));
+        }
+    }
+
+    // Turn radar ON
+    if(chan == chan1 && message == "ON"){
+        llResetScript();
+    }
+
+    //Turn radar OFF
+    if(chan == chan1 && message == "OFF"){
+        state stopped;
+    }
+
+    // Ask permission to Teleport to Safe Place
+    if(chan == chan1 && message == "Safe Place"){
+        llOwnerSay("TP'ing to your safe place");
+        llRequestPermissions(my_key, PERMISSION_TELEPORT);
+    }
+
+    // Open Advanced Dialog
+    if(chan == chan1 && message == "Advanced"){
+         llDialog(my_key, menu_title, advanced_menu, chan1);
+    }
+
+    // Get Name by Key
+    if(chan == chan1 && message == "Key to Name"){
+        llListenControl(listener3,!listener_switch);
+        llTextBox(my_key,"Avatar Key: ", chan3);
+    }
+
+    if(chan == chan3){
+        av_name_qry = llRequestUsername((key)message);
+    }
+
+    // Open  Clear List Dialog
+    if(chan == chan1 && message == "Clear Av List"){
+        llListenControl(listener2,!listener_switch);
+        llTextBox(my_key,"\nIt is not possible to recover the list after this operation.\nAre you sure you want to clear the stalker list ? Say 'yes, I am sure' if you are really sure about this.\n",chan1);
+    }
+
+    // Clear Key List
+    if(chan == chan1 && message == "yes, I am sure"){
+        llLinksetDataWrite("keys_db","");
+        say("Stalker database cleared");
         llResetScript();
     }
     
-    attach(key owner_key){
-        if(owner_key){
-            say("attached");
-            set_menu_channel();
-            llResetScript();
-        } else {
-            say("detached");
-            llResetScript();
-        }
+    // Prints Version information
+    if(chan == chan1 && message == "Version"){
+        string msg = "Stalker Radar " + version;
+        say(msg);
     }
-    
+}
+
+
+// The "default" state, where everything begins
+default{
+    state_entry(){
+        init_state("ON");
+        llSetColor(white,ALL_SIDES);
+        llResetTime();
+        // Reads the avatar keys from the SL database
+        key_list = get_key_list();
+        llSetTimerEvent(interval);
+    }
+
+// Start scanning again when owner teleports, if inventory changes 
+// or clear database and start scanning if new owner
     changed(integer change){
         if(change & CHANGED_INVENTORY){
             say("changed inventory");
-            set_menu_channel();
             llResetScript();
         }
         if(change & CHANGED_OWNER){
+            llLinksetDataWrite("keys_db","");
             llResetScript();
         }
         if(change & CHANGED_TELEPORT){
+            say("New Region. Activating Scanner.");
             llResetScript();
         }
         if(change & CHANGED_REGION){
+            say("New Region. Activating Scanner.");
             llResetScript();
         }
     }
-    
-    state_entry(){
-        llSetText("Scanning",<1.000, 0.863, 0.000>,1.0);
-        say("The HUD is ON.\n Touch the HUD to turn it OFF.");
-        load_av_list(av_notecard);
-        llResetTime();
-        set_menu_channel();
-        llListen(menu_channel,"",llGetOwner(),"");
-    }
-
-    // Receives the data read from notecard 'avlist'
-    // parses the string into a list
-    dataserver(key request_key, string data){
-        if(request_key == nc_qry_id){
-            avlist_content = data;
-            av_list = llCSV2List(avlist_content);
-            llSetTimerEvent(interval);
-        }
-    }
-    
+// Here we scan the region for the stalker keys every "interval" seconds
     timer(){
-        integer av_list_size = llGetListLength(av_list);
-        integer av_index;
-        for(av_index=0; av_index < av_list_size; av_index++){
-            av_key = llList2Key(av_list,av_index);
-            vector agent = llGetAgentSize(av_key);
-            if(agent){
-                av_name = llKey2Name(av_key);
-                av_display = llGetDisplayName(av_key);
-                av_details = llGetObjectDetails(av_key,([OBJECT_POS]));
-                av_pos = (vector)llList2String(av_details,0);
-                my_pos = llGetPos();
+        integer key_list_size = llGetListLength(key_list);
+        for(key_index=0; key_index < key_list_size; key_index++){
+            av_key = llList2Key(key_list,key_index);
+            agent_sz = llGetAgentSize(av_key);
+            if(agent_sz != ZERO_VECTOR){
+                string av_name = llKey2Name(av_key);
+                string av_display = llGetDisplayName(av_key);
+                list av_details = llGetObjectDetails(av_key,([OBJECT_POS]));
+                vector av_pos = (vector)llList2String(av_details,0);
+                vector my_pos = llGetPos();
                 integer distance = (integer)llVecDist(my_pos, av_pos);
+                if(distance <= 96){
+                    state alert_state;
+                }
                 string msg = "ALERT!!! "+ av_display + " ("+av_name +")"+ " is in the SIM at " + (string)distance + " meters";
                 say(msg);
-                llSetText("!!! ALERT !!!",<1.000, 0.863, 0.000>,1.0);
-                llSetColor(red,ALL_SIDES);
+
             } else {
-                llSetText("Scanning",<1.000, 0.863, 0.000>,1.0);
+                llSetText("Scanning",yellow,1.0);
                 llSetColor(white, ALL_SIDES);
             }
         }
-        
+
     }
-        
-    touch_start(integer num_touch){
-        llDialog(llGetOwner(),menu_title,menu_buttons,menu_channel); 
+
+
+// On touch, open dialog
+    touch_start(integer total_number){
+        llDialog(my_key, menu_title, basic_menu, chan1);
+        llListenControl(listener1,!listener_switch);
     }
-    
-     listen(integer chan, string name, key id, string message){
-        if(message == "ON"){
-            llResetScript();
-        }
-        
-        if(message == "OFF"){
-            state stopped;
-        }
-        
-        if(message == "Safe Place"){
-            llRequestPermissions(llGetOwner(), PERMISSION_TELEPORT);
+
+// Listen for commands from the dialogs and handle them using
+// our "menu_handler" function
+    listen(integer chan, string name, key id, string message){
+       menu_handler(chan,name, id,message);
+    }
+
+// Reads data from SL Server
+    dataserver(key query_id, string data){
+        if(query_id == av_name_qry){
+            say("Avatar User Name: "+data);
+            av_name_qry = "";
+        } else if(query_id == add_av_by_name){
+            av_key = data;
+            if(av_key){
+                key_list = llCSV2List(llLinksetDataRead("keys_db"));
+                key_list = llListInsertList(key_list,[av_key],0);
+                llLinksetDataWrite("keys_db",llList2CSV(key_list));
+                say(av_name+" added to your list");
+                say("Av Key: "+data);
+                add_av_by_name = "0";
+            }
         }
     }
-    
-     run_time_permissions(integer perm){
+
+// Checks if the we have permission to teleport
+// Owners must permit the teleport or it wont work
+    run_time_permissions(integer perm){
         if(PERMISSION_TELEPORT & perm){
-            llTeleportAgent(llGetOwner(),"safe_place",ZERO_VECTOR,ZERO_VECTOR);
+            llTeleportAgent(my_key,"safe_place",ZERO_VECTOR,ZERO_VECTOR);
         }
     }
 }
 
+// Turns the radar OFF
 state stopped {
-    on_rez(integer num_rez){
-        set_menu_channel();
-        llResetScript();
-    }
-    
-    attach(key owner_key){
-        if(owner_key){
-            say("attached");
-            set_menu_channel();
-            llResetScript();
-        } else {
-            say("detached");
-            llResetScript();
-        }
-    }
     state_entry(){
-        set_menu_channel();
-        llSetText("OFF",<1.000, 0.863, 0.000>,1.0);
-        say("HUD is now OFF");
-        say("Touch the HUD to turn it ON again");
-        switch = 0;
+        init_state("OFF");
         llSetColor(white,ALL_SIDES);
-        llListen(menu_channel,"",llGetOwner(),"");
         llResetTime();
     }
-    
-    touch_start(integer num_touch){
-        llDialog(llGetOwner(),menu_title,menu_buttons,menu_channel);
+
+    touch_start(integer total_number){
+        llDialog(my_key, menu_title, basic_menu, chan1);
+        llListenControl(listener1,!listener_switch);
     }
-    
+
     listen(integer chan, string name, key id, string message){
-        if(message == "ON"){
-            llResetScript();
-        }
-        
-        if(message == "OFF"){
-            state stopped;
-        }
-        
-        if(message == "Safe Place"){
-            llOwnerSay("TP'ing to your safe place");
-            llRequestPermissions(llGetOwner(), PERMISSION_TELEPORT);
-        }
+       menu_handler(chan,name, id, message);
     }
-    
+
     run_time_permissions(integer perm){
         if(PERMISSION_TELEPORT & perm){
-            llTeleportAgent(llGetOwner(),"safe_place",ZERO_VECTOR,ZERO_VECTOR);
+            llTeleportAgent(my_key,"safe_place",ZERO_VECTOR,ZERO_VECTOR);
         }
     }
+
+    dataserver(key query_id, string data){
+        if(query_id == av_name_qry){
+            say("Avatar User Name: "+data);
+            av_name_qry = "";
+        } else if(query_id == add_av_by_name){
+            av_key = data;
+            if(av_key){
+                key_list = llCSV2List(llLinksetDataRead("keys_db"));
+                key_list = llListInsertList(key_list,[av_key],0);
+                llLinksetDataWrite("keys_db",llList2CSV(key_list));
+                say(av_name+" added to your list");
+                say("Av Key: "+data);
+                add_av_by_name = "0";
+            }
+        }
+    }
+
 }
+
+state alert_state {
+    state_entry(){
+        init_state("ON");
+        llResetTime();
+        llSetText("!!! ALERT !!!",red,1.0);
+        llSetColor(red,ALL_SIDES);
+        llSensorRepeat("",av_key, 0x1, 96.0, PI, 5.0);
+    }
+    
+    touch_start(integer total_number){
+        llDialog(my_key, menu_title, basic_menu, chan1);
+        llListenControl(listener1,!listener_switch);
+    }
+
+    listen(integer chan, string name, key id, string message){
+        menu_handler(chan,name, id, message);
+    }
+
+    run_time_permissions(integer perm){
+        if(PERMISSION_TELEPORT & perm){
+            llTeleportAgent(my_key,"safe_place",ZERO_VECTOR,ZERO_VECTOR);
+        }
+    }
+    
+    sensor(integer num_detected){
+        string av_name = llKey2Name(av_key);
+        string av_display = llGetDisplayName(av_key);
+        list av_details = llGetObjectDetails(av_key,([OBJECT_POS]));
+        vector av_pos = (vector)llList2String(av_details,0);
+        vector my_pos = llGetPos();
+        integer distance = (integer)llVecDist(my_pos, av_pos);
+        string msg = "ALERT!!! "+ av_display + " ("+av_name +")"+ " is in the SIM at " + (string)distance + " meters";
+        say(msg);
+    }
+
+    no_sensor(){
+        llResetScript();
+    }        
+}
+

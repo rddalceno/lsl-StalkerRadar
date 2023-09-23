@@ -1,0 +1,58 @@
+INSTRUCTIONS
+===============
+
+- Safe Place
+
+  Will teleport you to a safe place. 
+  By default, this place is the Safe Hub Sim, but you can change it, if you want.
+  More information on how to change it on F.A.Q.
+
+
+- ON
+  Turns the radar "on" 
+  
+
+- OFF
+  Turns the radar "off"
+
+
+- Advanced
+  opens the "Advanced" dialog
+  
+
+- Add Av
+  Adds a new avatar key to your stalker list.
+  You must use the avatar's name, not the display name.
+  If you don't know the difference, here's how you can get it:
+  
+  Open the avatar's profile.
+  On "Name:" field, you will see the Display Name and the username. 
+  It is, usually, in the form: Display Name (user.name)
+  You have to use the user.name that is inside the (  ).
+
+
+- Remove Av
+  Removes an avatar from your stalkers list.
+  It will ask you for a "index key".
+  Don't worry. You can get this on the next button...
+  
+  
+- List Av
+  Will list the keys of the stalkers stored in your list and an index.
+  The index (first number on the left) is the position of the key in the list.
+  You can use this index to remove a key from the list.
+
+
+- Advanced -> Key to Name
+  If you have too much keys listed in your stalkers list (i hope you don't)
+  and you want to delete some of them, for any reason, you can use
+  this button to check the name associated with that key.
+
+
+- Clear Av List
+  Be careful. This button will clear your stalker list.
+  Use with caution.
+  It will ask you if you are sure of this action before clearing the list
+  as a last resource of security, so you don't clear the list for mistake.
+  
+
