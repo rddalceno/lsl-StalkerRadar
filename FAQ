@@ -1,0 +1,45 @@
+1. How can I change the Safe Place destination ?
+   Edit your HUD and go to "contents" tab.
+   You will see a landmark named "safe_place".
+   Delete it.
+   Open your inventory and find the landmark of your choice.
+   Drag and drop it into the "contents" of the HUD (i assume it is still
+   in edit mode).
+   Rename it to "safe_place"
+   Close the edit mode, clicking on the 'x' on the top-right corner
+   of the edit window
+   There it is. Now "Safe Place" button will teleport you to your safe place
+
+2. How much is it ?
+    Its free. You can copy, transfer, modify and redistribute your 
+    modifications if you want. 
+    Free of charge and free as in freedom.
+
+3. Why did you do this ?
+    Because I believe SL should be a safe place for everyone.
+    But, it seems that not everyone in SL thinks the same way and some
+    of them thinks that stalking others is OK. It's not! Not in RL, not in SL.
+
+4. No... seriously... how much ?
+    Seriously. Its free.
+    If you feel very generous and really want to pay something, just send
+    the amount you believe is fair to <mithos.anatra>
+    If you think it would be useful for others, share it with them.
+    
+5. Why do you use the avatar's key and not the avatar's name ?
+    Because names can be changed.
+    Each object in SL has a unique key that identifies it to SL servers.
+    It is the same for avatars. Each avatar in SL has its own key that is
+    unique and immutable.
+    If your stalker changes its name, the key will remain the same and the 
+    radar will identify it when it enters the region you are in and will tell 
+    you the name its using now, so you can find the avatar (if you want)
+    and don't get surprised.
+    
+6. Do you get the alts too ?
+    Nope. Thats why the HUD stores a list of keys and not a single name
+    or single key.
+    So... as soon as you identify an alt of your stalker, you can add it to
+    your stalkers list and will be warned of the presence of both.
+    
+
