@@ -1,3 +1,6 @@
+FREQUENTLY ASKED QUESTIONS
+==========================
+
 1. How can I change the Safe Place destination ?
    Edit your HUD and go to "contents" tab.
    You will see a landmark named "safe_place".
@@ -17,8 +20,8 @@
 
 3. Why did you do this ?
     Because I believe SL should be a safe place for everyone.
-    But, it seems that not everyone in SL thinks the same way and some
-    of them thinks that stalking others is OK. It's not! Not in RL, not in SL.
+    But, it seems that not everyone in SL thinks this way and some
+    of them thinks that stalking others is OK. Its not! Not in RL, not in SL.
 
 4. No... seriously... how much ?
     Seriously. Its free.
@@ -31,7 +34,7 @@
     Each object in SL has a unique key that identifies it to SL servers.
     It is the same for avatars. Each avatar in SL has its own key that is
     unique and immutable.
-    If your stalker changes its name, the key will remain the same and the 
+    If your stalker changes its name, the key will be the same and the 
     radar will identify it when it enters the region you are in and will tell 
     you the name its using now, so you can find the avatar (if you want)
     and don't get surprised.
